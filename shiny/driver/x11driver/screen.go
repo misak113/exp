@@ -178,6 +178,7 @@ func (s *screenImpl) run() {
 			if w := s.findWindow(ev.Event); w != nil {
 				w.lifecycler.SetFocused(true)
 				w.lifecycler.SendEvent(w, nil)
+				w.handleFocus(true)
 			} else {
 				noWindowFound = true
 			}
@@ -186,6 +187,7 @@ func (s *screenImpl) run() {
 			if w := s.findWindow(ev.Event); w != nil {
 				w.lifecycler.SetFocused(false)
 				w.lifecycler.SendEvent(w, nil)
+				w.handleFocus(false)
 			} else {
 				noWindowFound = true
 			}

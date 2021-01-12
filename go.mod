@@ -14,4 +14,4 @@ require (
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 )
 
-replace golang.org/x/mobile => github.com/misak113/mobile v0.0.0-20210103170524-21e5a0da1870
+replace golang.org/x/mobile => github.com/misak113/mobile v0.0.0-20210112202128-4fcf4361ad68

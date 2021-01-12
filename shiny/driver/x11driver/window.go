@@ -22,6 +22,7 @@ import (
 	"golang.org/x/exp/shiny/driver/internal/x11key"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/image/math/f64"
+	"golang.org/x/mobile/event/focus"
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/mouse"
 	"golang.org/x/mobile/event/paint"
@@ -128,6 +129,10 @@ func (w *windowImpl) handleConfigureNotify(ev xproto.ConfigureNotifyEvent) {
 
 func (w *windowImpl) handleExpose() {
 	w.Send(paint.Event{})
+}
+
+func (w *windowImpl) handleFocus(in bool) {
+	w.Send(focus.Event{in})
 }
 
 func (w *windowImpl) handleKey(detail xproto.Keycode, state uint16, dir key.Direction) {
