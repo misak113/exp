@@ -261,6 +261,12 @@ func keyModifiers() (m key.Modifiers) {
 	if down(_VK_LWIN) || down(_VK_RWIN) {
 		m |= key.ModMeta
 	}
+	if down(_VK_MENU) && down(_VK_CONTROL) {
+		m &= ^key.ModAlt
+		m &= ^key.ModControl
+		m |= key.ModLevel3Shift
+		m |= key.ModModeSwitch
+	}
 	return m
 }
 
