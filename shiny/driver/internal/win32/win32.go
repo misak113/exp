@@ -17,6 +17,7 @@ import (
 	"unsafe"
 
 	"golang.org/x/exp/shiny/screen"
+	"golang.org/x/mobile/event/focus"
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/lifecycle"
 	"golang.org/x/mobile/event/mouse"
@@ -123,8 +124,10 @@ func sendFocus(hwnd syscall.Handle, uMsg uint32, wParam, lParam uintptr) (lResul
 	switch uMsg {
 	case _WM_SETFOCUS:
 		LifecycleEvent(hwnd, lifecycle.StageFocused)
+		FocusEvent(hwnd, focus.Event{true})
 	case _WM_KILLFOCUS:
 		LifecycleEvent(hwnd, lifecycle.StageVisible)
+		FocusEvent(hwnd, focus.Event{false})
 	default:
 		panic(fmt.Sprintf("unexpected focus message: %d", uMsg))
 	}
@@ -266,6 +269,7 @@ var (
 	PaintEvent     func(hwnd syscall.Handle, e paint.Event)
 	SizeEvent      func(hwnd syscall.Handle, e size.Event)
 	KeyEvent       func(hwnd syscall.Handle, e key.Event)
+	FocusEvent     func(hwnd syscall.Handle, e focus.Event)
 	LifecycleEvent func(hwnd syscall.Handle, e lifecycle.Stage)
 
 	// TODO: use the golang.org/x/exp/shiny/driver/internal/lifecycler package

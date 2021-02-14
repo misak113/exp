@@ -128,6 +128,7 @@ func init() {
 	win32.PaintEvent = paintEvent
 	win32.MouseEvent = mouseEvent
 	win32.KeyEvent = keyEvent
+	win32.FocusEvent = focusEvent
 	win32.LifecycleEvent = lifecycleEvent
 }
 
