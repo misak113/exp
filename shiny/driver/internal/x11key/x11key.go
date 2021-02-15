@@ -40,11 +40,15 @@ type KeysymTable struct {
 // Lookup converts Xkb xproto keycode (detail) & mod (state) into mobile/event/key Rune & Code
 func (t *KeysymTable) Lookup(detail uint8, state uint16) (rune, key.Code) {
 	te := t.Table[detail][0:2]
-	if state&t.ModeSwitchMod != 0 {
-		te = t.Table[detail][2:4]
-	}
-	if state&t.ISOLevel3ShiftMod != 0 {
-		te = t.Table[detail][4:6]
+	if state != 0 {
+		if _, unmodifiedCode := t.Lookup(detail, 0); !isModifierKeyCode(unmodifiedCode) {
+			if state&t.ModeSwitchMod != 0 {
+				te = t.Table[detail][2:4]
+			}
+			if state&t.ISOLevel3ShiftMod != 0 {
+				te = t.Table[detail][4:6]
+			}
+		}
 	}
 
 	// The key event's rune depends on whether the shift key is down.
@@ -82,6 +86,17 @@ func (t *KeysymTable) Lookup(detail uint8, state uint16) (rune, key.Code) {
 	}
 
 	return r, c
+}
+
+func isModifierKeyCode(code key.Code) bool {
+	return code == key.CodeCapsLock ||
+		code == key.CodeKeypadNumLock ||
+		code == key.CodeLeftControl ||
+		code == key.CodeLeftShift ||
+		code == key.CodeLeftAlt ||
+		code == key.CodeRightControl ||
+		code == key.CodeRightShift ||
+		code == key.CodeRightAlt
 }
 
 func isKeypad(keysym uint32) bool {
