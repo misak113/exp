@@ -15,3 +15,5 @@ require (
 )
 
 replace golang.org/x/mobile => github.com/misak113/mobile v0.0.0-20210112202128-4fcf4361ad68
+
+replace github.com/nuberu/webgl => github.com/misak113/webgl v0.0.0-20210309211020-683b40e067b3
