@@ -6,6 +6,7 @@ import (
 	"strings"
 	"syscall/js"
 
+	"golang.org/x/mobile/event/focus"
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/mouse"
 	"golang.org/x/mobile/event/size"
@@ -195,6 +196,30 @@ func getEventModifiers(ev js.Value) (mod key.Modifiers) {
 	}
 
 	return
+}
+
+func (w *windowImpl) bindFocusEvents() {
+	onFocus := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		w.eventChan <- focus.Event{
+			In: isFocusIn(args[0]),
+		}
+		return nil
+	})
+	js.Global().Call("addEventListener", "focus", onFocus)
+	js.Global().Call("addEventListener", "blur", onFocus)
+
+	w.releases = append(w.releases, func() {
+		js.Global().Call("removeEventListener", "focus", onFocus)
+		js.Global().Call("removeEventListener", "blur", onFocus)
+		onFocus.Release()
+	})
+}
+
+func isFocusIn(ev js.Value) bool {
+	if ev.Get("type").String() == "focus" {
+		return true
+	}
+	return false
 }
 
 func (w *windowImpl) bindKeyEvents() {

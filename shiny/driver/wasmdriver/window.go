@@ -99,6 +99,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	go w.emitSizeEvent()
 	w.bindMouseEvents()
 	w.bindKeyEvents()
+	w.bindFocusEvents()
 
 	return w
 }
