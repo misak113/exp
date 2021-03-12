@@ -97,6 +97,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 
 	w.bindSizeEvents()
 	go w.emitSizeEvent()
+	w.bindMouseEvents()
 
 	return w
 }
