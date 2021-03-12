@@ -3,13 +3,11 @@
 package wasmdriver
 
 import (
-	"context"
 	"image"
 	"image/color"
 	"image/draw"
 	"sync"
 	"syscall/js"
-	"time"
 
 	"github.com/nuberu/webgl"
 	"github.com/nuberu/webgl/types"
@@ -35,6 +33,8 @@ type windowImpl struct {
 	imageTexV     *types.Texture
 	vertexArray   *types.VertexArray
 	released      bool
+	releases      []func()
+	eventChan     chan interface{}
 }
 
 func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
@@ -43,13 +43,13 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 
 	width := opts.Width
 	if opts.Width == 0 {
-		width = screen.doc.Get("documentElement").Get("clientWidth").Int()
+		width = getDocWidth()
 	}
 	canvasEl.Set("width", width)
 
 	height := opts.Height
 	if opts.Height == 0 {
-		height = screen.doc.Get("documentElement").Get("clientHeight").Int()
+		height = getDocHeight()
 	}
 	canvasEl.Set("height", height)
 
@@ -63,11 +63,13 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	}
 
 	w := &windowImpl{
-		screen:   screen,
-		width:    width,
-		height:   height,
-		canvasEl: canvasEl,
-		gl:       gl,
+		screen:    screen,
+		width:     width,
+		height:    height,
+		canvasEl:  canvasEl,
+		gl:        gl,
+		releases:  make([]func(), 0),
+		eventChan: make(chan interface{}),
 	}
 
 	// RGBA program
@@ -93,6 +95,9 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	w.gl.Viewport(0, 0, w.width, w.height)
 	w.clear()
 
+	w.bindSizeEvents()
+	go w.emitSizeEvent()
+
 	return w
 }
 
@@ -111,6 +116,10 @@ func (w *windowImpl) Release() {
 	}
 
 	w.canvasEl.Call("remove")
+
+	for _, release := range w.releases {
+		release()
+	}
 
 	w.released = true
 }
@@ -141,9 +150,8 @@ func (w *windowImpl) SendFirst(event interface{}) {
 }
 
 func (w *windowImpl) NextEvent() interface{} {
-	//panic("Not implemented")
-	time.Sleep(1 * time.Hour)
-	return <-context.Background().Done()
+	ev := <-w.eventChan
+	return ev
 }
 
 // Uploader methods
