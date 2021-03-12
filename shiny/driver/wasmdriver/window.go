@@ -15,6 +15,7 @@ import (
 
 	"github.com/nuberu/webgl"
 	"github.com/nuberu/webgl/types"
+	"golang.org/x/exp/shiny/imageutil"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/image/math/f64"
 )
@@ -198,7 +199,7 @@ func (w *windowImpl) clear() {
 	w.gl.Clear(uint32(webgl.COLOR_BUFFER_BIT))
 }
 
-func (w *windowImpl) drawBuffer(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+func (w *windowImpl) drawBufferRGBA(dp image.Point, src screen.Buffer, sr image.Rectangle) {
 	w.gl.BindTexture(webgl.TEXTURE_2D, w.imageTex)
 	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X, sr.Max.Y, webgl.RGBA, webgl.UNSIGNED_BYTE, webgl.TypedArrayOf(src.RGBA().Pix))
 
@@ -258,7 +259,16 @@ func (w *windowImpl) Upload(dp image.Point, src screen.Buffer, sr image.Rectangl
 		return
 	}
 
-	w.drawBuffer(dp, src, sr)
+	w.drawBufferRGBA(dp, src, sr)
+}
+
+func (w *windowImpl) UploadYCbCr(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+	if w.released {
+		return
+	}
+
+	imageutil.ConvertYCbCrToRGBA(src)
+	w.drawBufferRGBA(dp, src, sr)
 }
 
 func (w *windowImpl) Fill(dr image.Rectangle, src color.Color, op draw.Op) {

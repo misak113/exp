@@ -292,6 +292,7 @@ func (s *screenImpl) NewBuffer(size image.Point) (retBuf screen.Buffer, retErr e
 		return nil, fmt.Errorf("x11driver: invalid buffer size %v", size)
 	}
 
+	rect := image.Rectangle{Max: size}
 	// If the X11 server or connection cannot support SHM pixmaps,
 	// fall back to regular pixmaps.
 	if !s.useShm {
@@ -303,6 +304,15 @@ func (s *screenImpl) NewBuffer(size image.Point) (retBuf screen.Buffer, retErr e
 				Rect:   image.Rectangle{Max: size},
 				Pix:    make([]uint8, 4*size.X*size.Y),
 			},
+			ycbcr: image.YCbCr{
+				Rect:           rect,
+				SubsampleRatio: image.YCbCrSubsampleRatio420,
+				YStride:        size.X,
+				CStride:        size.X / 2,
+				Y:              make([]uint8, size.X*size.Y),
+				Cb:             make([]uint8, size.X*size.Y/4),
+				Cr:             make([]uint8, size.X*size.Y/4),
+			},
 		}
 		b.buf = b.rgba.Pix
 		return b, nil
@@ -312,7 +322,16 @@ func (s *screenImpl) NewBuffer(size image.Point) (retBuf screen.Buffer, retErr e
 		s: s,
 		rgba: image.RGBA{
 			Stride: 4 * size.X,
-			Rect:   image.Rectangle{Max: size},
+			Rect:   rect,
+		},
+		ycbcr: image.YCbCr{
+			Rect:           rect,
+			SubsampleRatio: image.YCbCrSubsampleRatio420,
+			YStride:        size.X,
+			CStride:        size.X / 2,
+			Y:              make([]uint8, size.X*size.Y),
+			Cb:             make([]uint8, size.X*size.Y/4),
+			Cr:             make([]uint8, size.X*size.Y/4),
 		},
 		size: size,
 	}

@@ -7,6 +7,9 @@ package imageutil
 
 import (
 	"image"
+	"image/draw"
+
+	"golang.org/x/exp/shiny/screen"
 )
 
 // TODO: move Border into the standard library's package image?
@@ -98,4 +101,8 @@ func Border(r image.Rectangle, inset int) [4]image.Rectangle {
 			Y: y[3],
 		},
 	}}
+}
+
+func ConvertYCbCrToRGBA(b screen.Buffer) {
+	draw.Draw(b.RGBA(), b.YCbCr().Bounds(), b.YCbCr(), b.RGBA().Rect.Min, draw.Src)
 }

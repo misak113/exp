@@ -45,13 +45,23 @@ func (*screenImpl) NewBuffer(size image.Point) (screen.Buffer, error) {
 	bufLen := 4 * size.X * size.Y
 	array := (*[maxBufLen]byte)(unsafe.Pointer(bitvalues))
 	buf := (*array)[:bufLen:bufLen]
+	rect := image.Rectangle{Max: size}
 	return &bufferImpl{
 		hbitmap: hbitmap,
 		buf:     buf,
 		rgba: image.RGBA{
 			Pix:    buf,
 			Stride: 4 * size.X,
-			Rect:   image.Rectangle{Max: size},
+			Rect:   rect,
+		},
+		ycbcr: image.YCbCr{
+			Rect:           rect,
+			SubsampleRatio: image.YCbCrSubsampleRatio420,
+			YStride:        size.X,
+			CStride:        size.X / 2,
+			Y:              make([]uint8, size.X*size.Y),
+			Cb:             make([]uint8, size.X*size.Y/4),
+			Cr:             make([]uint8, size.X*size.Y/4),
 		},
 		size: size,
 	}, nil

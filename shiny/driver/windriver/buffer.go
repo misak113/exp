@@ -19,6 +19,7 @@ type bufferImpl struct {
 	hbitmap syscall.Handle
 	buf     []byte
 	rgba    image.RGBA
+	ycbcr   image.YCbCr
 	size    image.Point
 
 	mu        sync.Mutex
@@ -30,6 +31,7 @@ type bufferImpl struct {
 func (b *bufferImpl) Size() image.Point       { return b.size }
 func (b *bufferImpl) Bounds() image.Rectangle { return image.Rectangle{Max: b.size} }
 func (b *bufferImpl) RGBA() *image.RGBA       { return &b.rgba }
+func (b *bufferImpl) YCbCr() *image.YCbCr     { return &b.ycbcr }
 
 func (b *bufferImpl) preUpload() {
 	// Check that the program hasn't tried to modify the rgba field via the
@@ -89,6 +91,9 @@ func (b *bufferImpl) cleanUp() {
 	b.mu.Unlock()
 
 	b.rgba.Pix = nil
+	b.ycbcr.Y = nil
+	b.ycbcr.Cb = nil
+	b.ycbcr.Cr = nil
 	_DeleteObject(b.hbitmap)
 }
 
