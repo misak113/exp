@@ -74,6 +74,7 @@ func (w *windowImpl) emitSizeEvent() {
 func (w *windowImpl) bindMouseEvents() {
 	// move
 	onMove := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		args[0].Call("preventDefault")
 		w.eventChan <- mouse.Event{
 			X:         float32(args[0].Get("offsetX").Float()),
 			Y:         float32(args[0].Get("offsetY").Float()),
@@ -87,6 +88,7 @@ func (w *windowImpl) bindMouseEvents() {
 
 	// press/release
 	onClick := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		args[0].Call("preventDefault")
 		w.eventChan <- mouse.Event{
 			X:         float32(args[0].Get("offsetX").Float()),
 			Y:         float32(args[0].Get("offsetY").Float()),
@@ -198,6 +200,7 @@ func getEventModifiers(ev js.Value) (mod key.Modifiers) {
 func (w *windowImpl) bindKeyEvents() {
 	// press/release
 	onKey := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		args[0].Call("preventDefault")
 		w.eventChan <- key.Event{
 			Rune:      getKeyRune(args[0]),
 			Code:      getKeyCode(args[0]),
