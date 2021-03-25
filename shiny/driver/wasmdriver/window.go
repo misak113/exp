@@ -172,6 +172,18 @@ func (w *windowImpl) UploadYCbCr(dp image.Point, src screen.Buffer, sr image.Rec
 		return
 	}
 
+	// rendering of JS ArrayBuffer YCbCr image to reduce copying between JS and Go
+	switch wasmSrc := src.(type) {
+	case *BufferImpl:
+		if wasmSrc.YCbCrJS().Use {
+			if wasmSrc.YCbCrJS().SubsampleRatio != image.YCbCrSubsampleRatio420 {
+				panic("Only image.YCbCrSubsampleRatio420 SubsampleRatio is currently supported")
+			}
+			w.drawBufferYUV420JSArrayBuffers(dp, wasmSrc.YCbCrJS().Y.slice(), wasmSrc.YCbCrJS().Cb.slice(), wasmSrc.YCbCrJS().Cr.slice(), sr)
+			return
+		}
+	}
+
 	if src.YCbCr().SubsampleRatio == image.YCbCrSubsampleRatio420 {
 		// currently only YUV 420 format is accelerated on GPU
 		w.drawBufferYUV420(dp, src, sr)

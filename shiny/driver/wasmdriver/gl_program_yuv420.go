@@ -5,6 +5,7 @@ package wasmdriver
 import (
 	"fmt"
 	"image"
+	"syscall/js"
 
 	"github.com/nuberu/webgl"
 	"github.com/nuberu/webgl/types"
@@ -86,15 +87,31 @@ func (w *windowImpl) createAndLinkProgramYUV420() (*types.Program, error) {
 }
 
 func (w *windowImpl) drawBufferYUV420(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+	w.drawBufferYUV420JSArrayBuffers(
+		dp,
+		webgl.TypedArrayOf(src.YCbCr().Y),
+		webgl.TypedArrayOf(src.YCbCr().Cb),
+		webgl.TypedArrayOf(src.YCbCr().Cr),
+		sr,
+	)
+}
+
+func (w *windowImpl) drawBufferYUV420JSArrayBuffers(
+	dp image.Point,
+	y js.Value,
+	cb js.Value,
+	cr js.Value,
+	sr image.Rectangle,
+) {
 	w.gl.UseProgram(w.programYUV420)
 	w.gl.BindTexture(webgl.TEXTURE_2D, w.imageTexY)
-	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X, sr.Max.Y, webgl.LUMINANCE, webgl.UNSIGNED_BYTE, webgl.TypedArrayOf(src.YCbCr().Y))
+	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X, sr.Max.Y, webgl.LUMINANCE, webgl.UNSIGNED_BYTE, y)
 
 	w.gl.BindTexture(webgl.TEXTURE_2D, w.imageTexU)
-	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X/2, sr.Max.Y/2, webgl.LUMINANCE, webgl.UNSIGNED_BYTE, webgl.TypedArrayOf(src.YCbCr().Cb))
+	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X/2, sr.Max.Y/2, webgl.LUMINANCE, webgl.UNSIGNED_BYTE, cb)
 
 	w.gl.BindTexture(webgl.TEXTURE_2D, w.imageTexV)
-	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X/2, sr.Max.Y/2, webgl.LUMINANCE, webgl.UNSIGNED_BYTE, webgl.TypedArrayOf(src.YCbCr().Cr))
+	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X/2, sr.Max.Y/2, webgl.LUMINANCE, webgl.UNSIGNED_BYTE, cr)
 
 	w.gl.BindVertexArray(w.vertexArray)
 	w.gl.DrawElements(webgl.TRIANGLES, len(elementsIndices), webgl.UNSIGNED_SHORT, 0)
