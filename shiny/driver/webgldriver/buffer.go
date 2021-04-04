@@ -1,6 +1,6 @@
-// +build js,wasm
+// +build js
 
-package wasmdriver
+package webgldriver
 
 import (
 	"image"
@@ -90,12 +90,12 @@ func (b *BufferImpl) YCbCr() *image.YCbCr {
 // Follow example bellow in JS,WASM only environment
 /*
 
-// +build js,wasm
+// +build js
 
-ycbcrJSImg := outputBuffer.(*wasmdriver.BufferImpl).YCbCrJS()
-ycbcrJSImg.Y = wasmdriver.ArrayBufferSlice{pictureBuffer, 0, ySize}
-ycbcrJSImg.Cb = wasmdriver.ArrayBufferSlice{pictureBuffer, ySize, ySize + cSize}
-ycbcrJSImg.Cr = wasmdriver.ArrayBufferSlice{pictureBuffer, ySize + cSize, ySize + cSize*2}
+ycbcrJSImg := outputBuffer.(*webgldriver.BufferImpl).YCbCrJS()
+ycbcrJSImg.Y = webgldriver.ArrayBufferSlice{pictureBuffer, 0, ySize}
+ycbcrJSImg.Cb = webgldriver.ArrayBufferSlice{pictureBuffer, ySize, ySize + cSize}
+ycbcrJSImg.Cr = webgldriver.ArrayBufferSlice{pictureBuffer, ySize + cSize, ySize + cSize*2}
 ycbcrJSImg.YStride = yStride
 ycbcrJSImg.CStride = cStride
 ycbcrJSImg.SubsampleRatio = image.YCbCrSubsampleRatio420

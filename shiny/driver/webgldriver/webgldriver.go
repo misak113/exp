@@ -1,6 +1,6 @@
-// +build js,wasm
+// +build js
 
-package wasmdriver
+package webgldriver
 
 import (
 	"golang.org/x/exp/shiny/driver/internal/errscreen"

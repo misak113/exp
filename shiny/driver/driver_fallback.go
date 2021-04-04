@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 // +build !darwin
-// +build !linux android
+// +build !linux android js
 // +build !windows
 // +build !dragonfly
 // +build !openbsd
-// +build !js !wasm
+// +build !js
 
 package driver
 

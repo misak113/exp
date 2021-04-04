@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build js,wasm
+// +build js
 
 package driver
 
 import (
-	"golang.org/x/exp/shiny/driver/wasmdriver"
+	"golang.org/x/exp/shiny/driver/webgldriver"
 	"golang.org/x/exp/shiny/screen"
 )
 
 func main(f func(screen.Screen)) {
-	wasmdriver.Main(f)
+	webgldriver.Main(f)
 }

@@ -1,6 +1,6 @@
-// +build js,wasm
+// +build js
 
-package wasmdriver
+package webgldriver
 
 import (
 	"image"
@@ -173,13 +173,13 @@ func (w *windowImpl) UploadYCbCr(dp image.Point, src screen.Buffer, sr image.Rec
 	}
 
 	// rendering of JS ArrayBuffer YCbCr image to reduce copying between JS and Go
-	switch wasmSrc := src.(type) {
+	switch jsSrc := src.(type) {
 	case *BufferImpl:
-		if wasmSrc.YCbCrJS().Use {
-			if wasmSrc.YCbCrJS().SubsampleRatio != image.YCbCrSubsampleRatio420 {
+		if jsSrc.YCbCrJS().Use {
+			if jsSrc.YCbCrJS().SubsampleRatio != image.YCbCrSubsampleRatio420 {
 				panic("Only image.YCbCrSubsampleRatio420 SubsampleRatio is currently supported")
 			}
-			w.drawBufferYUV420JSArrayBuffers(dp, wasmSrc.YCbCrJS().Y.slice(), wasmSrc.YCbCrJS().Cb.slice(), wasmSrc.YCbCrJS().Cr.slice(), sr)
+			w.drawBufferYUV420JSArrayBuffers(dp, jsSrc.YCbCrJS().Y.slice(), jsSrc.YCbCrJS().Cb.slice(), jsSrc.YCbCrJS().Cr.slice(), sr)
 			return
 		}
 	}
