@@ -1,9 +1,8 @@
 // +build js
 
-package webgldriver
+package dom
 
 import (
-	"strings"
 	"syscall/js"
 
 	"golang.org/x/mobile/event/focus"
@@ -16,53 +15,56 @@ import (
 const mobileMouseButtonBack mouse.Button = 8
 const mobileMouseButtonForward mouse.Button = 9
 
-func getDocWidth() int {
-	return js.Global().Get("innerWidth").Int()
+type DomEvents struct {
+	eventChan chan interface{}
+	releases  []func()
 }
 
-func getDocHeight() int {
-	return js.Global().Get("innerHeight").Int()
-}
-
-func getOrientation() (orientation size.Orientation) {
-	defer func() {
-		if recover() != nil {
-			orientation = size.OrientationUnknown
-		}
-	}()
-	orientationType := js.Global().Get("screen").Get("orientation").Get("type").String()
-	if strings.HasPrefix(orientationType, "landscape") {
-		orientation = size.OrientationLandscape
-		return
+func NewDomEvents() *DomEvents {
+	return &DomEvents{
+		eventChan: make(chan interface{}),
+		releases:  make([]func(), 0),
 	}
-	if strings.HasPrefix(orientationType, "portrait") {
-		orientation = size.OrientationLandscape
-		return
-	}
-	orientation = size.OrientationUnknown
-	return
 }
 
-func (w *windowImpl) bindSizeEvents() {
+func (d *DomEvents) GetEventChan() chan interface{} {
+	return d.eventChan
+}
+
+func (d *DomEvents) Release() {
+	for _, release := range d.releases {
+		release()
+	}
+}
+
+func (d *DomEvents) BindEvents() {
+	d.bindSizeEvents()
+	go d.emitSizeEvent()
+	d.bindMouseEvents()
+	d.bindKeyEvents()
+	d.bindFocusEvents()
+}
+
+func (d *DomEvents) bindSizeEvents() {
 	onResize := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.emitSizeEvent()
+		d.emitSizeEvent()
 		return nil
 	})
 	js.Global().Call("addEventListener", "resize", onResize)
-	w.releases = append(w.releases, func() {
+	d.releases = append(d.releases, func() {
 		js.Global().Call("removeEventListener", "resize", onResize)
 		onResize.Release()
 	})
 }
 
-func (w *windowImpl) emitSizeEvent() {
-	orientation := getOrientation()
+func (d *DomEvents) emitSizeEvent() {
+	orientation := GetOrientation()
 	// TODO(nigeltao): don't assume 72 DPI. DisplayWidth and DisplayWidthMM
 	// is probably the best place to start looking.
 	pixelsPerPt := float32(1)
-	width := getDocWidth()
-	height := getDocHeight()
-	w.eventChan <- size.Event{
+	width := GetDocWidth()
+	height := GetDocHeight()
+	d.eventChan <- size.Event{
 		WidthPx:     width,
 		HeightPx:    height,
 		WidthPt:     geom.Pt(width / int(pixelsPerPt)),
@@ -72,11 +74,11 @@ func (w *windowImpl) emitSizeEvent() {
 	}
 }
 
-func (w *windowImpl) bindMouseEvents() {
+func (d *DomEvents) bindMouseEvents() {
 	// move
 	onMove := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		args[0].Call("preventDefault")
-		w.eventChan <- mouse.Event{
+		d.eventChan <- mouse.Event{
 			X:         float32(args[0].Get("offsetX").Float()),
 			Y:         float32(args[0].Get("offsetY").Float()),
 			Button:    mouse.ButtonNone,
@@ -90,7 +92,7 @@ func (w *windowImpl) bindMouseEvents() {
 	// press/release
 	onClick := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		args[0].Call("preventDefault")
-		w.eventChan <- mouse.Event{
+		d.eventChan <- mouse.Event{
 			X:         float32(args[0].Get("offsetX").Float()),
 			Y:         float32(args[0].Get("offsetY").Float()),
 			Button:    getMouseButton(args[0]),
@@ -104,7 +106,7 @@ func (w *windowImpl) bindMouseEvents() {
 
 	// wheel
 	onWheel := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.eventChan <- mouse.Event{
+		d.eventChan <- mouse.Event{
 			X:         float32(args[0].Get("offsetX").Float()),
 			Y:         float32(args[0].Get("offsetY").Float()),
 			Button:    getWheelButton(args[0]),
@@ -115,7 +117,7 @@ func (w *windowImpl) bindMouseEvents() {
 	})
 	js.Global().Call("addEventListener", "wheel", onWheel)
 
-	w.releases = append(w.releases, func() {
+	d.releases = append(d.releases, func() {
 		js.Global().Call("removeEventListener", "mousemove", onMove)
 		js.Global().Call("removeEventListener", "mousedown", onClick)
 		js.Global().Call("removeEventListener", "mouseup", onClick)
@@ -198,9 +200,9 @@ func getEventModifiers(ev js.Value) (mod key.Modifiers) {
 	return
 }
 
-func (w *windowImpl) bindFocusEvents() {
+func (d *DomEvents) bindFocusEvents() {
 	onFocus := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.eventChan <- focus.Event{
+		d.eventChan <- focus.Event{
 			In: isFocusIn(args[0]),
 		}
 		return nil
@@ -208,7 +210,7 @@ func (w *windowImpl) bindFocusEvents() {
 	js.Global().Call("addEventListener", "focus", onFocus)
 	js.Global().Call("addEventListener", "blur", onFocus)
 
-	w.releases = append(w.releases, func() {
+	d.releases = append(d.releases, func() {
 		js.Global().Call("removeEventListener", "focus", onFocus)
 		js.Global().Call("removeEventListener", "blur", onFocus)
 		onFocus.Release()
@@ -222,11 +224,11 @@ func isFocusIn(ev js.Value) bool {
 	return false
 }
 
-func (w *windowImpl) bindKeyEvents() {
+func (d *DomEvents) bindKeyEvents() {
 	// press/release
 	onKey := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		args[0].Call("preventDefault")
-		w.eventChan <- key.Event{
+		d.eventChan <- key.Event{
 			Rune:      getKeyRune(args[0]),
 			Code:      getKeyCode(args[0]),
 			Direction: getKeyDirection(args[0]),
@@ -237,7 +239,7 @@ func (w *windowImpl) bindKeyEvents() {
 	js.Global().Call("addEventListener", "keydown", onKey)
 	js.Global().Call("addEventListener", "keyup", onKey)
 
-	w.releases = append(w.releases, func() {
+	d.releases = append(d.releases, func() {
 		js.Global().Call("removeEventListener", "keydown", onKey)
 		js.Global().Call("removeEventListener", "keyup", onKey)
 		onKey.Release()

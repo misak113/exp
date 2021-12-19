@@ -11,6 +11,7 @@ import (
 
 	"github.com/nuberu/webgl"
 	"github.com/nuberu/webgl/types"
+	"golang.org/x/exp/shiny/driver/internal/dom"
 	"golang.org/x/exp/shiny/imageutil"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/image/math/f64"
@@ -33,8 +34,7 @@ type windowImpl struct {
 	imageTexV     *types.Texture
 	vertexArray   *types.VertexArray
 	released      bool
-	releases      []func()
-	eventChan     chan interface{}
+	domEvents     *dom.DomEvents
 }
 
 func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
@@ -43,13 +43,13 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 
 	width := opts.Width
 	if opts.Width == 0 {
-		width = getDocWidth()
+		width = dom.GetDocWidth()
 	}
 	canvasEl.Set("width", width)
 
 	height := opts.Height
 	if opts.Height == 0 {
-		height = getDocHeight()
+		height = dom.GetDocHeight()
 	}
 	canvasEl.Set("height", height)
 
@@ -62,14 +62,15 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 		panic(err)
 	}
 
+	domEvents := dom.NewDomEvents()
+
 	w := &windowImpl{
 		screen:    screen,
 		width:     width,
 		height:    height,
 		canvasEl:  canvasEl,
 		gl:        gl,
-		releases:  make([]func(), 0),
-		eventChan: make(chan interface{}),
+		domEvents: domEvents,
 	}
 
 	// RGBA program
@@ -95,11 +96,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	w.gl.Viewport(0, 0, w.width, w.height)
 	w.clear()
 
-	w.bindSizeEvents()
-	go w.emitSizeEvent()
-	w.bindMouseEvents()
-	w.bindKeyEvents()
-	w.bindFocusEvents()
+	domEvents.BindEvents()
 
 	return w
 }
@@ -120,9 +117,7 @@ func (w *windowImpl) Release() {
 
 	w.canvasEl.Call("remove")
 
-	for _, release := range w.releases {
-		release()
-	}
+	w.domEvents.Release()
 
 	w.released = true
 }
@@ -153,7 +148,7 @@ func (w *windowImpl) SendFirst(event interface{}) {
 }
 
 func (w *windowImpl) NextEvent() interface{} {
-	ev := <-w.eventChan
+	ev := <-w.domEvents.GetEventChan()
 	return ev
 }
 
