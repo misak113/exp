@@ -6,6 +6,7 @@ require (
 	dmitri.shuralyov.com/gpu/mtl v0.0.0-20201218220906-28db891af037
 	github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4
+	github.com/nuberu/webgl v0.0.0-00010101000000-000000000000 // indirect
 	golang.org/x/image v0.0.0-20190802002840-cff245a6509b
 	golang.org/x/mobile v0.0.0-20201217150744-e6ae53a27f4f
 	golang.org/x/mod v0.3.1-0.20200828183125-ce943fd02449
