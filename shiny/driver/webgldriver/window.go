@@ -19,39 +19,50 @@ import (
 
 type windowImpl struct {
 	screen *screenImpl
-	width  int
-	height int
 	// internal
 	mutex *sync.Mutex
 	// state
-	canvasEl      js.Value
-	gl            *webgl.RenderingContext
-	programRGBA   *types.Program
-	imageTexRGBA  *types.Texture
-	programYUV420 *types.Program
-	imageTexY     *types.Texture
-	imageTexU     *types.Texture
-	imageTexV     *types.Texture
-	vertexArray   *types.VertexArray
-	released      bool
-	domEvents     *dom.DomEvents
+	canvasEl       js.Value
+	gl             *webgl.RenderingContext
+	programRGBA    *types.Program
+	imageTexRGBA   *types.Texture
+	programYUV420  *types.Program
+	imageTexY      *types.Texture
+	imageTexU      *types.Texture
+	imageTexV      *types.Texture
+	vertexArray    *types.VertexArray
+	released       bool
+	domEvents      *dom.DomEvents
+	resizeCallback js.Func
 }
 
 func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	canvasEl := screen.doc.Call("createElement", "canvas")
 	screen.doc.Get("body").Call("appendChild", canvasEl)
 
-	width := opts.Width
-	if opts.Width == 0 {
-		width = dom.GetDocWidth()
+	adaptCanvas := func() {
+		width := dom.GetScreenWidth()
+		if canvasEl.Get("width").Int() != width {
+			canvasEl.Set("width", width)
+		}
+		height := dom.GetScreenHeight()
+		if canvasEl.Get("height").Int() != height {
+			canvasEl.Set("height", height)
+		}
 	}
-	canvasEl.Set("width", width)
+	adaptCanvas()
+	resizeCallback := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		adaptCanvas()
+		return nil
+	})
+	js.Global().Call("addEventListener", "resize", resizeCallback)
 
-	height := opts.Height
-	if opts.Height == 0 {
-		height = dom.GetDocHeight()
+	if opts.Width != 0 {
+		dom.SetWindowWidth(opts.Width)
 	}
-	canvasEl.Set("height", height)
+	if opts.Height != 0 {
+		dom.SetWindowHeight(opts.Height)
+	}
 
 	if opts.Title != "" {
 		screen.doc.Get("head").Call("getElementsByTagName", "title").Call("item", 0).Set("innerHTML", opts.Title)
@@ -65,35 +76,37 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	domEvents := dom.NewDomEvents()
 
 	w := &windowImpl{
-		screen:    screen,
-		width:     width,
-		height:    height,
-		canvasEl:  canvasEl,
-		gl:        gl,
-		domEvents: domEvents,
+		screen:         screen,
+		canvasEl:       canvasEl,
+		gl:             gl,
+		domEvents:      domEvents,
+		resizeCallback: resizeCallback,
 	}
+
+	width := dom.GetScreenWidth()
+	height := dom.GetScreenHeight()
 
 	// RGBA program
 	w.programRGBA, err = w.createAndLinkProgramRGBA()
 	if err != nil {
 		panic(err)
 	}
-	w.imageTexRGBA = w.createTexture(textureUnitRGBA, webgl.RGBA, w.width, w.height)
+	w.imageTexRGBA = w.createTexture(textureUnitRGBA, webgl.RGBA, width, height)
 
 	// YUV 420 program
 	w.programYUV420, err = w.createAndLinkProgramYUV420()
 	if err != nil {
 		panic(err)
 	}
-	w.imageTexY = w.createTexture(textureUnitY, webgl.LUMINANCE, w.width, w.height)
-	w.imageTexU = w.createTexture(textureUnitU, webgl.LUMINANCE, w.width/2, w.height/2)
-	w.imageTexV = w.createTexture(textureUnitV, webgl.LUMINANCE, w.width/2, w.height/2)
+	w.imageTexY = w.createTexture(textureUnitY, webgl.LUMINANCE, width, height)
+	w.imageTexU = w.createTexture(textureUnitU, webgl.LUMINANCE, width/2, height/2)
+	w.imageTexV = w.createTexture(textureUnitV, webgl.LUMINANCE, width/2, height/2)
 
 	// General
 	w.vertexArray = w.createBuffers()
 
 	w.gl.Enable(webgl.DEPTH_TEST)
-	w.gl.Viewport(0, 0, w.width, w.height)
+	w.gl.Viewport(0, 0, width, height)
 	w.clear()
 
 	domEvents.BindEvents()
@@ -114,6 +127,9 @@ func (w *windowImpl) Release() {
 	if w.released {
 		return
 	}
+
+	js.Global().Call("removeEventListener", "resize", w.resizeCallback)
+	w.resizeCallback.Release()
 
 	w.canvasEl.Call("remove")
 

@@ -17,32 +17,44 @@ import (
 
 type windowImpl struct {
 	screen *screenImpl
-	width  int
-	height int
 	// internal
 	mutex *sync.Mutex
 	// state
-	canvasEl  js.Value
-	ctx2d     js.Value
-	released  bool
-	domEvents *dom.DomEvents
+	canvasEl       js.Value
+	ctx2d          js.Value
+	released       bool
+	domEvents      *dom.DomEvents
+	resizeCallback js.Func
 }
 
 func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	canvasEl := screen.doc.Call("createElement", "canvas")
 	screen.doc.Get("body").Call("appendChild", canvasEl)
 
-	width := opts.Width
-	if opts.Width == 0 {
-		width = dom.GetDocWidth()
+	adaptCanvas := func() {
+		scale := dom.GetBrowserZoomRatio()
+		width := int(float64(dom.GetScreenWidth()) / scale)
+		if canvasEl.Get("width").Int() != width {
+			canvasEl.Set("width", width)
+		}
+		height := int(float64(dom.GetScreenHeight()) / scale)
+		if canvasEl.Get("height").Int() != height {
+			canvasEl.Set("height", height)
+		}
 	}
-	canvasEl.Set("width", width)
+	adaptCanvas()
+	resizeCallback := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		adaptCanvas()
+		return nil
+	})
+	js.Global().Call("addEventListener", "resize", resizeCallback)
 
-	height := opts.Height
-	if opts.Height == 0 {
-		height = dom.GetDocHeight()
+	if opts.Width != 0 {
+		dom.SetWindowWidth(opts.Width)
 	}
-	canvasEl.Set("height", height)
+	if opts.Height != 0 {
+		dom.SetWindowHeight(opts.Height)
+	}
 
 	if opts.Title != "" {
 		screen.doc.Get("head").Call("getElementsByTagName", "title").Call("item", 0).Set("innerHTML", opts.Title)
@@ -56,12 +68,11 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	domEvents := dom.NewDomEvents()
 
 	w := &windowImpl{
-		screen:    screen,
-		width:     width,
-		height:    height,
-		canvasEl:  canvasEl,
-		ctx2d:     ctx2d,
-		domEvents: domEvents,
+		screen:         screen,
+		canvasEl:       canvasEl,
+		ctx2d:          ctx2d,
+		domEvents:      domEvents,
+		resizeCallback: resizeCallback,
 	}
 
 	domEvents.BindEvents()
@@ -77,6 +88,9 @@ func (w *windowImpl) Release() {
 	if w.released {
 		return
 	}
+
+	js.Global().Call("removeEventListener", "resize", w.resizeCallback)
+	w.resizeCallback.Release()
 
 	w.canvasEl.Call("remove")
 
