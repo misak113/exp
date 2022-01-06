@@ -51,6 +51,34 @@ void main(void) {
 }
 `
 
+func (w *windowImpl) ensureYUV420Textures(width int, height int) {
+	if w.programYUV420 == nil {
+		var err error
+		w.programYUV420, err = w.createAndLinkProgramYUV420()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if w.width == width && w.height == height {
+		return
+	}
+
+	w.ensureCanvasSize(width, height)
+
+	w.imageTexY = w.createTexture(textureUnitY, webgl.LUMINANCE, width, height)
+	w.imageTexU = w.createTexture(textureUnitU, webgl.LUMINANCE, width/2, height/2)
+	w.imageTexV = w.createTexture(textureUnitV, webgl.LUMINANCE, width/2, height/2)
+
+	w.gl.Enable(webgl.DEPTH_TEST)
+	w.gl.Viewport(0, 0, width, height)
+
+	w.width = width
+	w.height = height
+
+	w.clear()
+}
+
 func (w *windowImpl) createAndLinkProgramYUV420() (*types.Program, error) {
 	shaderProgram := w.gl.CreateProgram()
 
@@ -103,6 +131,8 @@ func (w *windowImpl) drawBufferYUV420JSArrayBuffers(
 	cr js.Value,
 	sr image.Rectangle,
 ) {
+	w.ensureYUV420Textures(sr.Max.X, sr.Max.Y)
+
 	w.gl.UseProgram(w.programYUV420)
 	w.gl.BindTexture(webgl.TEXTURE_2D, w.imageTexY)
 	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X, sr.Max.Y, webgl.LUMINANCE, webgl.UNSIGNED_BYTE, y)

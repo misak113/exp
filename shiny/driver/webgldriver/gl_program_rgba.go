@@ -21,6 +21,32 @@ void main(void) {
 }
 `
 
+func (w *windowImpl) ensureRGBATextures(width int, height int) {
+	if w.programRGBA == nil {
+		var err error
+		w.programRGBA, err = w.createAndLinkProgramRGBA()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if w.width == width && w.height == height {
+		return
+	}
+
+	w.ensureCanvasSize(width, height)
+
+	w.imageTexRGBA = w.createTexture(textureUnitRGBA, webgl.RGBA, width, height)
+
+	w.gl.Enable(webgl.DEPTH_TEST)
+	w.gl.Viewport(0, 0, width, height)
+
+	w.width = width
+	w.height = height
+
+	w.clear()
+}
+
 func (w *windowImpl) createAndLinkProgramRGBA() (*types.Program, error) {
 	shaderProgram := w.gl.CreateProgram()
 
@@ -49,6 +75,8 @@ func (w *windowImpl) createAndLinkProgramRGBA() (*types.Program, error) {
 }
 
 func (w *windowImpl) drawBufferRGBA(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+	w.ensureRGBATextures(sr.Max.X, sr.Max.Y)
+
 	w.gl.UseProgram(w.programRGBA)
 	w.gl.BindTexture(webgl.TEXTURE_2D, w.imageTexRGBA)
 	w.gl.TexSubImage2D(webgl.TEXTURE_2D, 0, dp.X, dp.Y, sr.Max.X, sr.Max.Y, webgl.RGBA, webgl.UNSIGNED_BYTE, webgl.TypedArrayOf(src.RGBA().Pix))

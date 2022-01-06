@@ -22,40 +22,38 @@ type windowImpl struct {
 	// internal
 	mutex *sync.Mutex
 	// state
-	canvasEl       js.Value
-	gl             *webgl.RenderingContext
-	programRGBA    *types.Program
-	imageTexRGBA   *types.Texture
-	programYUV420  *types.Program
-	imageTexY      *types.Texture
-	imageTexU      *types.Texture
-	imageTexV      *types.Texture
-	vertexArray    *types.VertexArray
-	released       bool
-	domEvents      *dom.DomEvents
-	resizeCallback js.Func
+	canvasEl      js.Value
+	gl            *webgl.RenderingContext
+	programRGBA   *types.Program
+	imageTexRGBA  *types.Texture
+	programYUV420 *types.Program
+	imageTexY     *types.Texture
+	imageTexU     *types.Texture
+	imageTexV     *types.Texture
+	vertexArray   *types.VertexArray
+	released      bool
+	domEvents     *dom.DomEvents
+	width         int
+	height        int
 }
 
 func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	canvasEl := screen.doc.Call("createElement", "canvas")
 	screen.doc.Get("body").Call("appendChild", canvasEl)
 
-	adaptCanvas := func() {
-		width := dom.GetScreenWidth()
-		if canvasEl.Get("width").Int() != width {
-			canvasEl.Set("width", width)
-		}
-		height := dom.GetScreenHeight()
-		if canvasEl.Get("height").Int() != height {
-			canvasEl.Set("height", height)
-		}
+	gl, err := webgl.FromCanvas(canvasEl)
+	if err != nil {
+		panic(err)
 	}
-	adaptCanvas()
-	resizeCallback := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		adaptCanvas()
-		return nil
-	})
-	js.Global().Call("addEventListener", "resize", resizeCallback)
+
+	domEvents := dom.NewDomEvents()
+
+	w := &windowImpl{
+		screen:    screen,
+		canvasEl:  canvasEl,
+		gl:        gl,
+		domEvents: domEvents,
+	}
 
 	if opts.Width != 0 {
 		dom.SetWindowWidth(opts.Width)
@@ -68,50 +66,21 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 		screen.doc.Get("head").Call("getElementsByTagName", "title").Call("item", 0).Set("innerHTML", opts.Title)
 	}
 
-	gl, err := webgl.FromCanvas(canvasEl)
-	if err != nil {
-		panic(err)
-	}
-
-	domEvents := dom.NewDomEvents()
-
-	w := &windowImpl{
-		screen:         screen,
-		canvasEl:       canvasEl,
-		gl:             gl,
-		domEvents:      domEvents,
-		resizeCallback: resizeCallback,
-	}
-
-	width := dom.GetScreenWidth()
-	height := dom.GetScreenHeight()
-
-	// RGBA program
-	w.programRGBA, err = w.createAndLinkProgramRGBA()
-	if err != nil {
-		panic(err)
-	}
-	w.imageTexRGBA = w.createTexture(textureUnitRGBA, webgl.RGBA, width, height)
-
-	// YUV 420 program
-	w.programYUV420, err = w.createAndLinkProgramYUV420()
-	if err != nil {
-		panic(err)
-	}
-	w.imageTexY = w.createTexture(textureUnitY, webgl.LUMINANCE, width, height)
-	w.imageTexU = w.createTexture(textureUnitU, webgl.LUMINANCE, width/2, height/2)
-	w.imageTexV = w.createTexture(textureUnitV, webgl.LUMINANCE, width/2, height/2)
-
 	// General
 	w.vertexArray = w.createBuffers()
-
-	w.gl.Enable(webgl.DEPTH_TEST)
-	w.gl.Viewport(0, 0, width, height)
-	w.clear()
 
 	domEvents.BindEvents()
 
 	return w
+}
+
+func (w *windowImpl) ensureCanvasSize(width int, height int) {
+	if w.canvasEl.Get("width").Int() != width {
+		w.canvasEl.Set("width", width)
+	}
+	if w.canvasEl.Get("height").Int() != height {
+		w.canvasEl.Set("height", height)
+	}
 }
 
 func (w *windowImpl) clear() {
@@ -127,9 +96,6 @@ func (w *windowImpl) Release() {
 	if w.released {
 		return
 	}
-
-	js.Global().Call("removeEventListener", "resize", w.resizeCallback)
-	w.resizeCallback.Release()
 
 	w.canvasEl.Call("remove")
 
