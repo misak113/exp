@@ -40,11 +40,14 @@ type screenImpl struct {
 }
 
 func (s *screenImpl) NewBuffer(size image.Point) (retBuf screen.Buffer, retErr error) {
-	m := image.NewRGBA(image.Rectangle{Max: size})
+	rect := image.Rectangle{Max: size}
+	m := image.NewRGBA(rect)
+	ycbcr := image.NewYCbCr(rect, image.YCbCrSubsampleRatio420)
 	return &bufferImpl{
-		buf:  m.Pix,
-		rgba: *m,
-		size: size,
+		buf:   m.Pix,
+		rgba:  *m,
+		ycbcr: *ycbcr,
+		size:  size,
 	}, nil
 }
 

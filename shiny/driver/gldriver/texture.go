@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"image/draw"
 
+	"golang.org/x/exp/shiny/imageutil"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/mobile/gl"
 )
@@ -34,6 +35,11 @@ func (t *textureImpl) Release() {
 	}
 	t.w.glctx.DeleteTexture(t.id)
 	t.id = gl.Texture{}
+}
+
+func (t *textureImpl) UploadYCbCr(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+	imageutil.ConvertYCbCrToRGBA(src)
+	t.Upload(dp, src, sr)
 }
 
 func (t *textureImpl) Upload(dp image.Point, src screen.Buffer, sr image.Rectangle) {

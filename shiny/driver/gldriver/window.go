@@ -13,6 +13,7 @@ import (
 	"golang.org/x/exp/shiny/driver/internal/drawer"
 	"golang.org/x/exp/shiny/driver/internal/event"
 	"golang.org/x/exp/shiny/driver/internal/lifecycler"
+	"golang.org/x/exp/shiny/imageutil"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/image/math/f64"
 	"golang.org/x/mobile/event/lifecycle"
@@ -113,6 +114,11 @@ func (w *windowImpl) Release() {
 	theScreen.mu.Unlock()
 
 	closeWindow(w.id)
+}
+
+func (w *windowImpl) UploadYCbCr(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+	imageutil.ConvertYCbCrToRGBA(src)
+	w.Upload(dp, src, sr)
 }
 
 func (w *windowImpl) Upload(dp image.Point, src screen.Buffer, sr image.Rectangle) {
