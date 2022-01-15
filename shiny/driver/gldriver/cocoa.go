@@ -338,10 +338,10 @@ func keyEvent(id uintptr, runeVal rune, dir uint8, code uint16, flags uint32) {
 func flagEvent(id uintptr, flags uint32) {
 	for _, mod := range mods {
 		if flags&mod.flags == mod.flags && lastFlags&mod.flags != mod.flags {
-			keyEvent(id, -1, C.NSKeyDown, mod.code, flags)
+			keyEvent(id, -1, uint8(key.DirPress), mod.code, flags)
 		}
 		if lastFlags&mod.flags == mod.flags && flags&mod.flags != mod.flags {
-			keyEvent(id, -1, C.NSKeyUp, mod.code, flags)
+			keyEvent(id, -1, uint8(key.DirRelease), mod.code, flags)
 		}
 	}
 	lastFlags = flags
