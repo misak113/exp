@@ -10,7 +10,7 @@ import (
 	"sync"
 	"syscall/js"
 
-	"golang.org/x/exp/shiny/driver/internal/dom"
+	"golang.org/x/exp/shiny/driver/util/dom"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/image/math/f64"
 )
