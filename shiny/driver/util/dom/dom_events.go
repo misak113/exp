@@ -62,12 +62,13 @@ func (d *DomEvents) bindSizeEvents() {
 }
 
 func (d *DomEvents) emitSizeEvent() {
+	devicePixelRatio := GetDevicePixelRatio()
 	orientation := GetOrientation()
 	// TODO(nigeltao): don't assume 72 DPI. DisplayWidth and DisplayWidthMM
 	// is probably the best place to start looking.
 	pixelsPerPt := float32(1)
-	width := GetDocWidth()
-	height := GetDocHeight()
+	width := int(float64(GetDocWidth()) * devicePixelRatio)
+	height := int(float64(GetDocHeight()) * devicePixelRatio)
 	d.eventChan <- size.Event{
 		WidthPx:     width,
 		HeightPx:    height,
