@@ -33,11 +33,11 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 
 	adaptCanvas := func() {
 		scale := dom.GetBrowserZoomRatio()
-		width := int(float64(dom.GetScreenWidth()) / scale)
+		width := int(float64(dom.GetDocWidth()) / scale)
 		if canvasEl.Get("width").Int() != width {
 			canvasEl.Set("width", width)
 		}
-		height := int(float64(dom.GetScreenHeight()) / scale)
+		height := int(float64(dom.GetDocHeight()) / scale)
 		if canvasEl.Get("height").Int() != height {
 			canvasEl.Set("height", height)
 		}
