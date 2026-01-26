@@ -68,8 +68,9 @@ func (w *windowImpl) createTexture(
 	w.gl.ActiveTexture(uint32(unit))
 	imageTex := w.gl.CreateTexture()
 	w.gl.BindTexture(webgl.TEXTURE_2D, imageTex)
-	w.gl.TexParameterWrapS(webgl.TEXTURE_2D, webgl.REPEAT)
-	w.gl.TexParameterWrapT(webgl.TEXTURE_2D, webgl.REPEAT)
+	// Clamp is the only wrap mode supported in WebGL1 for non-power-of-two sized textures
+	w.gl.TexParameterWrapS(webgl.TEXTURE_2D, webgl.CLAMP_TO_EDGE)
+	w.gl.TexParameterWrapT(webgl.TEXTURE_2D, webgl.CLAMP_TO_EDGE)
 	w.gl.TexParameterMinFilter(webgl.TEXTURE_2D, webgl.LINEAR)
 	w.gl.TexParameterMagFilter(webgl.TEXTURE_2D, webgl.LINEAR)
 	w.gl.TexImage2Db(webgl.TEXTURE_2D, 0, format, width, height, 0, format, nil)
