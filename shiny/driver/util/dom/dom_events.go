@@ -1,3 +1,4 @@
+//go:build js
 // +build js
 
 package dom
@@ -9,6 +10,7 @@ import (
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/mouse"
 	"golang.org/x/mobile/event/size"
+	"golang.org/x/mobile/event/touch"
 	"golang.org/x/mobile/geom"
 )
 
@@ -43,6 +45,7 @@ func (d *DomEvents) BindEvents() {
 	d.bindMouseEvents()
 	d.bindKeyEvents()
 	d.bindFocusEvents()
+	d.bindTouchEvents()
 }
 
 func (d *DomEvents) bindSizeEvents() {
@@ -417,4 +420,33 @@ var keyCodesByKeyMap = map[string]key.Code{
 	"AudioVolumeMute": key.CodeMute,       // non FF
 	"AudioVolumeUp":   key.CodeVolumeUp,   // non FF
 	"AudioVolumeDown": key.CodeVolumeDown, // non FF
+}
+
+func (d *DomEvents) addTouchListener(eventName string, eventType touch.Type) {
+	handler := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		args[0].Call("preventDefault")
+		t := args[0].Get("changedTouches").Index(0)
+		d.eventChan <- touch.Event{
+			X:        float32(t.Get("screenX").Float()),
+			Y:        float32(t.Get("screenY").Float()),
+			Sequence: touch.Sequence(t.Get("identifier").Int()),
+			Type:     eventType,
+		}
+		return nil
+	})
+	opts := js.Global().Get("Object").New()
+	opts.Set("passive", false)
+	opts.Set("capture", false)
+	js.Global().Call("addEventListener", eventName, handler, opts)
+
+	d.releases = append(d.releases, func() {
+		js.Global().Call("removeEventListener", eventName, handler)
+		handler.Release()
+	})
+}
+
+func (d *DomEvents) bindTouchEvents() {
+	d.addTouchListener("touchstart", touch.TypeBegin)
+	d.addTouchListener("touchend", touch.TypeEnd)
+	d.addTouchListener("touchmove", touch.TypeMove)
 }
