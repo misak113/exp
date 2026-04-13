@@ -427,8 +427,8 @@ func (d *DomEvents) addTouchListener(eventName string, eventType touch.Type) {
 		args[0].Call("preventDefault")
 		t := args[0].Get("changedTouches").Index(0)
 		d.eventChan <- touch.Event{
-			X:        float32(t.Get("screenX").Float()),
-			Y:        float32(t.Get("screenY").Float()),
+			X:        float32(t.Get("clientX").Float()),
+			Y:        float32(t.Get("clientY").Float()),
 			Sequence: touch.Sequence(t.Get("identifier").Int()),
 			Type:     eventType,
 		}
