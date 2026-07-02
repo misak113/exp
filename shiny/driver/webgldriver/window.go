@@ -75,6 +75,9 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 }
 
 func (w *windowImpl) ensureCanvasSize(width int, height int) {
+	// TODO consider using different width/height, this come from SR which is size of the buffer to draw
+	// but we should probably match canvas size to window size instead. Decoded frame can be larger due to devicePixelRatio
+	// and we want to render scaled down to current screen size. Same is done for canvas in canvasdriver impl.
 	if w.canvasEl.Get("width").Int() != width {
 		w.canvasEl.Set("width", width)
 	}
