@@ -476,5 +476,6 @@ func (d *DomEvents) emitTouchEvent(ev touch.Event) {
 func (d *DomEvents) bindTouchEvents() {
 	d.addTouchListener("touchstart", touch.TypeBegin)
 	d.addTouchListener("touchend", touch.TypeEnd)
+	d.addTouchListener("touchcancel", touch.TypeEnd)
 	d.addTouchListener("touchmove", touch.TypeMove)
 }
