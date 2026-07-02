@@ -16,6 +16,7 @@ import (
 
 const mobileMouseButtonBack mouse.Button = 8
 const mobileMouseButtonForward mouse.Button = 9
+const domEventChanSize = 256
 
 type DomEvents struct {
 	eventChan chan interface{}
@@ -24,7 +25,7 @@ type DomEvents struct {
 
 func NewDomEvents() *DomEvents {
 	return &DomEvents{
-		eventChan: make(chan interface{}),
+		eventChan: make(chan interface{}, domEventChanSize),
 		releases:  make([]func(), 0),
 	}
 }
@@ -424,25 +425,52 @@ var keyCodesByKeyMap = map[string]key.Code{
 
 func (d *DomEvents) addTouchListener(eventName string, eventType touch.Type) {
 	handler := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		args[0].Call("preventDefault")
-		t := args[0].Get("changedTouches").Index(0)
-		d.eventChan <- touch.Event{
+		if len(args) == 0 {
+			return nil
+		}
+		ev := args[0]
+		// No preventDefault here: the listener must stay passive so the Tizen 4.0
+		// (Chromium M56) renderer scheduler does not enter main-thread gesture mode,
+		// which blocks timer/loading task queues (GopherJS scheduler + WebSocket
+		// video frames) for the whole touch gesture. Scrolling/zoom is suppressed
+		// via CSS `touch-action: none` instead.
+
+		changedTouches := ev.Get("changedTouches")
+		if changedTouches.IsUndefined() || changedTouches.IsNull() || changedTouches.Length() == 0 {
+			return nil
+		}
+
+		t := changedTouches.Index(0)
+		d.emitTouchEvent(touch.Event{
 			X:        float32(t.Get("clientX").Float()),
 			Y:        float32(t.Get("clientY").Float()),
 			Sequence: touch.Sequence(t.Get("identifier").Int()),
 			Type:     eventType,
-		}
+		})
 		return nil
 	})
 	opts := js.Global().Get("Object").New()
-	opts.Set("passive", false)
+	opts.Set("passive", true)
 	opts.Set("capture", false)
 	js.Global().Call("addEventListener", eventName, handler, opts)
 
 	d.releases = append(d.releases, func() {
-		js.Global().Call("removeEventListener", eventName, handler)
+		js.Global().Call("removeEventListener", eventName, handler, opts)
 		handler.Release()
 	})
+}
+
+func (d *DomEvents) emitTouchEvent(ev touch.Event) {
+	select {
+	case d.eventChan <- ev:
+	default:
+		if ev.Type == touch.TypeMove {
+			return
+		}
+		go func() {
+			d.eventChan <- ev
+		}()
+	}
 }
 
 func (d *DomEvents) bindTouchEvents() {
