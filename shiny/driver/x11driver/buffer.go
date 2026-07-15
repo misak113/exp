@@ -26,11 +26,12 @@ type bufferUploader interface {
 type bufferImpl struct {
 	s *screenImpl
 
-	addr unsafe.Pointer
-	buf  []byte
-	rgba image.RGBA
-	size image.Point
-	xs   shm.Seg
+	addr  unsafe.Pointer
+	buf   []byte
+	rgba  image.RGBA
+	ycbcr image.YCbCr
+	size  image.Point
+	xs    shm.Seg
 
 	mu        sync.Mutex
 	nUpload   uint32
@@ -42,6 +43,7 @@ func (b *bufferImpl) degenerate() bool        { return b.size.X == 0 || b.size.Y
 func (b *bufferImpl) Size() image.Point       { return b.size }
 func (b *bufferImpl) Bounds() image.Rectangle { return image.Rectangle{Max: b.size} }
 func (b *bufferImpl) RGBA() *image.RGBA       { return &b.rgba }
+func (b *bufferImpl) YCbCr() *image.YCbCr     { return &b.ycbcr }
 
 func (b *bufferImpl) preUpload() {
 	// Check that the program hasn't tried to modify the rgba field via the

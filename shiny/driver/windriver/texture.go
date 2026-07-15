@@ -16,6 +16,7 @@ import (
 	"unsafe"
 
 	"golang.org/x/exp/shiny/driver/internal/win32"
+	"golang.org/x/exp/shiny/imageutil"
 	"golang.org/x/exp/shiny/screen"
 )
 
@@ -131,6 +132,11 @@ func (t *textureImpl) Upload(dp image.Point, src screen.Buffer, sr image.Rectang
 	if err != nil {
 		panic(err) // TODO handle error
 	}
+}
+
+func (t *textureImpl) UploadYCbCr(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+	imageutil.ConvertYCbCrToRGBA(src)
+	t.Upload(dp, src, sr)
 }
 
 // update prepares texture t for update and executes f over texture device

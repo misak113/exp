@@ -22,9 +22,10 @@ const (
 type bufferFallbackImpl struct {
 	xc *xgb.Conn
 
-	buf  []byte
-	rgba image.RGBA
-	size image.Point
+	buf   []byte
+	rgba  image.RGBA
+	ycbcr image.YCbCr
+	size  image.Point
 
 	mu       sync.Mutex
 	nUpload  uint32
@@ -34,6 +35,7 @@ type bufferFallbackImpl struct {
 func (b *bufferFallbackImpl) Size() image.Point       { return b.size }
 func (b *bufferFallbackImpl) Bounds() image.Rectangle { return image.Rectangle{Max: b.size} }
 func (b *bufferFallbackImpl) RGBA() *image.RGBA       { return &b.rgba }
+func (b *bufferFallbackImpl) YCbCr() *image.YCbCr     { return &b.ycbcr }
 
 func (b *bufferFallbackImpl) preUpload() {
 	// Check that the program hasn't tried to modify the rgba field via the

@@ -139,6 +139,10 @@ type Buffer interface {
 	// and so is this:
 	//	*buffer.RGBA() = anotherImageRGBA
 	RGBA() *image.RGBA
+	// YCbCr returns buffer memory in YUV 420 representation instead of RGBA
+	// it can be used to optimize rendering on GPU level when input is YCbCr format rathr than RGBA
+	// if GPU support for color conversion is not supported, go native CPU conversion is used
+	YCbCr() *image.YCbCr
 }
 
 // Texture is a pixel buffer, but not one that is directly accessible as a
@@ -286,6 +290,8 @@ type Uploader interface {
 	// When uploading to a Window, there will not be any visible effect until
 	// Publish is called.
 	Upload(dp image.Point, src Buffer, sr image.Rectangle)
+	// UploadYCbCr is do the same as Upload, but the source for image is use YCbCr() instead of RGBA() of src buffer
+	UploadYCbCr(dp image.Point, src Buffer, sr image.Rectangle)
 
 	// Fill fills that part of the destination (the method receiver) defined by
 	// dr with the given color.
