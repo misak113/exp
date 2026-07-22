@@ -429,11 +429,7 @@ func (d *DomEvents) addTouchListener(eventName string, eventType touch.Type) {
 			return nil
 		}
 		ev := args[0]
-		// No preventDefault here: the listener must stay passive so the Tizen 4.0
-		// (Chromium M56) renderer scheduler does not enter main-thread gesture mode,
-		// which blocks timer/loading task queues (GopherJS scheduler + WebSocket
-		// video frames) for the whole touch gesture. Scrolling/zoom is suppressed
-		// via CSS `touch-action: none` instead.
+		ev.Call("preventDefault")
 
 		changedTouches := ev.Get("changedTouches")
 		if changedTouches.IsUndefined() || changedTouches.IsNull() || changedTouches.Length() == 0 {
@@ -450,7 +446,7 @@ func (d *DomEvents) addTouchListener(eventName string, eventType touch.Type) {
 		return nil
 	})
 	opts := js.Global().Get("Object").New()
-	opts.Set("passive", true)
+	opts.Set("passive", false)
 	opts.Set("capture", false)
 	js.Global().Call("addEventListener", eventName, handler, opts)
 
