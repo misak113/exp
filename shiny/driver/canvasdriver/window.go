@@ -31,7 +31,22 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	canvasEl := screen.doc.Call("createElement", "canvas")
 	screen.doc.Get("body").Call("appendChild", canvasEl)
 
+	// When an explicit geometry is requested via options, the canvas is
+	// positioned at that location instead of covering the whole viewport.
+	hasGeometry := opts != nil && opts.Width > 0 && opts.Height > 0
+	if hasGeometry {
+		style := canvasEl.Get("style")
+		style.Set("position", "absolute")
+		style.Set("left", fmt.Sprintf("%dpx", opts.X))
+		style.Set("top", fmt.Sprintf("%dpx", opts.Y))
+		canvasEl.Set("width", opts.Width)
+		canvasEl.Set("height", opts.Height)
+	}
+
 	adaptCanvas := func() {
+		if hasGeometry {
+			return
+		}
 		scale := dom.GetBrowserZoomRatio()
 		width := int(float64(dom.GetDocWidth()) / scale)
 		if canvasEl.Get("width").Int() != width {
