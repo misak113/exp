@@ -84,6 +84,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 
 	w := &windowImpl{
 		screen:         screen,
+		mutex:          &sync.Mutex{},
 		canvasEl:       canvasEl,
 		ctx2d:          ctx2d,
 		domEvents:      domEvents,
