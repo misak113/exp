@@ -31,13 +31,33 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	canvasEl := screen.doc.Call("createElement", "canvas")
 	screen.doc.Get("body").Call("appendChild", canvasEl)
 
+	// When an explicit geometry is requested via options, the canvas is
+	// positioned at that location instead of covering the whole viewport.
+	hasGeometry := opts != nil && opts.Width > 0 && opts.Height > 0
+	if hasGeometry {
+		style := canvasEl.Get("style")
+		style.Set("position", "absolute")
+		style.Set("left", fmt.Sprintf("%dpx", opts.X))
+		style.Set("top", fmt.Sprintf("%dpx", opts.Y))
+		canvasEl.Set("width", opts.Width)
+		canvasEl.Set("height", opts.Height)
+	}
+
 	adaptCanvas := func() {
-		scale := dom.GetBrowserZoomRatio()
-		width := int(float64(dom.GetDocWidth()) / scale)
+		if hasGeometry {
+			return
+		}
+		// Use the document viewport size directly. It must stay in sync with
+		// dom.emitSizeEvent(), which reports the very same values. Do NOT divide
+		// by dom.GetBrowserZoomRatio() here — that heuristic compares innerWidth
+		// against outerWidth, which is not comparable under Chrome device
+		// emulation or inside an iframe (outerWidth always refers to the real
+		// top-level browser window), and it silently scaled the canvas down.
+		width := dom.GetDocWidth()
 		if canvasEl.Get("width").Int() != width {
 			canvasEl.Set("width", width)
 		}
-		height := int(float64(dom.GetDocHeight()) / scale)
+		height := dom.GetDocHeight()
 		if canvasEl.Get("height").Int() != height {
 			canvasEl.Set("height", height)
 		}
@@ -69,6 +89,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 
 	w := &windowImpl{
 		screen:         screen,
+		mutex:          &sync.Mutex{},
 		canvasEl:       canvasEl,
 		ctx2d:          ctx2d,
 		domEvents:      domEvents,

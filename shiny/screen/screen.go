@@ -232,6 +232,11 @@ type PublishResult struct {
 
 // NewWindowOptions are optional arguments to NewWindow.
 type NewWindowOptions struct {
+	// X and Y specify the position of the new window within the screen, in
+	// pixels. The zero value means the driver's default position (usually the
+	// origin, covering the whole screen).
+	X, Y int
+
 	// Width and Height specify the dimensions of the new window. If Width
 	// or Height are zero, a driver-dependent default will be used for each
 	// zero value dimension.

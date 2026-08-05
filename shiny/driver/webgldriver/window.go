@@ -3,6 +3,7 @@
 package webgldriver
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -41,6 +42,17 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 	canvasEl := screen.doc.Call("createElement", "canvas")
 	screen.doc.Get("body").Call("appendChild", canvasEl)
 
+	// When an explicit geometry is requested via options, the canvas is
+	// positioned at that location instead of covering the whole viewport.
+	if opts != nil && opts.Width > 0 && opts.Height > 0 {
+		style := canvasEl.Get("style")
+		style.Set("position", "absolute")
+		style.Set("left", fmt.Sprintf("%dpx", opts.X))
+		style.Set("top", fmt.Sprintf("%dpx", opts.Y))
+		style.Set("width", fmt.Sprintf("%dpx", opts.Width))
+		style.Set("height", fmt.Sprintf("%dpx", opts.Height))
+	}
+
 	gl, err := webgl.FromCanvas(canvasEl)
 	if err != nil {
 		panic(err)
@@ -50,6 +62,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 
 	w := &windowImpl{
 		screen:    screen,
+		mutex:     &sync.Mutex{},
 		canvasEl:  canvasEl,
 		gl:        gl,
 		domEvents: domEvents,
