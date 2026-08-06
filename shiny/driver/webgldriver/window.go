@@ -58,7 +58,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 		panic(err)
 	}
 
-	domEvents := dom.NewDomEvents()
+	domEvents := dom.NewDomEventsForTarget(canvasEl)
 
 	w := &windowImpl{
 		screen:    screen,

@@ -85,7 +85,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 		panic(fmt.Errorf("Cannot get 2d context of canvas"))
 	}
 
-	domEvents := dom.NewDomEvents()
+	domEvents := dom.NewDomEventsForTarget(canvasEl)
 
 	w := &windowImpl{
 		screen:         screen,
