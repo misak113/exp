@@ -19,14 +19,20 @@ const mobileMouseButtonForward mouse.Button = 9
 const domEventChanSize = 256
 
 type DomEvents struct {
-	eventChan chan interface{}
-	releases  []func()
+	eventChan   chan interface{}
+	inputTarget js.Value
+	releases    []func()
 }
 
 func NewDomEvents() *DomEvents {
+	return NewDomEventsForTarget(js.Global())
+}
+
+func NewDomEventsForTarget(inputTarget js.Value) *DomEvents {
 	return &DomEvents{
-		eventChan: make(chan interface{}, domEventChanSize),
-		releases:  make([]func(), 0),
+		eventChan:   make(chan interface{}, domEventChanSize),
+		inputTarget: inputTarget,
+		releases:    make([]func(), 0),
 	}
 }
 
@@ -91,7 +97,7 @@ func (d *DomEvents) bindMouseEvents() {
 		}
 		return nil
 	})
-	js.Global().Call("addEventListener", "mousemove", onMove)
+	d.inputTarget.Call("addEventListener", "mousemove", onMove)
 
 	// press/release
 	onClick := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -105,8 +111,8 @@ func (d *DomEvents) bindMouseEvents() {
 		}
 		return nil
 	})
-	js.Global().Call("addEventListener", "mousedown", onClick)
-	js.Global().Call("addEventListener", "mouseup", onClick)
+	d.inputTarget.Call("addEventListener", "mousedown", onClick)
+	d.inputTarget.Call("addEventListener", "mouseup", onClick)
 
 	// wheel
 	onWheel := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -119,13 +125,13 @@ func (d *DomEvents) bindMouseEvents() {
 		}
 		return nil
 	})
-	js.Global().Call("addEventListener", "wheel", onWheel)
+	d.inputTarget.Call("addEventListener", "wheel", onWheel)
 
 	d.releases = append(d.releases, func() {
-		js.Global().Call("removeEventListener", "mousemove", onMove)
-		js.Global().Call("removeEventListener", "mousedown", onClick)
-		js.Global().Call("removeEventListener", "mouseup", onClick)
-		js.Global().Call("removeEventListener", "wheel", onWheel)
+		d.inputTarget.Call("removeEventListener", "mousemove", onMove)
+		d.inputTarget.Call("removeEventListener", "mousedown", onClick)
+		d.inputTarget.Call("removeEventListener", "mouseup", onClick)
+		d.inputTarget.Call("removeEventListener", "wheel", onWheel)
 		onMove.Release()
 		onClick.Release()
 		onWheel.Release()
@@ -448,10 +454,10 @@ func (d *DomEvents) addTouchListener(eventName string, eventType touch.Type) {
 	opts := js.Global().Get("Object").New()
 	opts.Set("passive", false)
 	opts.Set("capture", false)
-	js.Global().Call("addEventListener", eventName, handler, opts)
+	d.inputTarget.Call("addEventListener", eventName, handler, opts)
 
 	d.releases = append(d.releases, func() {
-		js.Global().Call("removeEventListener", eventName, handler, opts)
+		d.inputTarget.Call("removeEventListener", eventName, handler, opts)
 		handler.Release()
 	})
 }
