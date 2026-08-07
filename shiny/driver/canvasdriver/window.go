@@ -26,6 +26,9 @@ type windowImpl struct {
 	released       bool
 	domEvents      *dom.DomEvents
 	resizeCallback js.Func
+	frontEvents    []interface{}
+	backEvents     []interface{}
+	eventWake      chan struct{}
 }
 
 func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
@@ -95,6 +98,7 @@ func newWindow(screen *screenImpl, opts *screen.NewWindowOptions) *windowImpl {
 		ctx2d:          ctx2d,
 		domEvents:      domEvents,
 		resizeCallback: resizeCallback,
+		eventWake:      make(chan struct{}, 1),
 	}
 
 	domEvents.BindEvents()
@@ -163,12 +167,51 @@ func (w *windowImpl) SendFirst(event interface{}) {
 	if w.released {
 		return
 	}
-	panic("Not implemented")
+
+	w.frontEvents = append(w.frontEvents, event)
+	select {
+	case w.eventWake <- struct{}{}:
+	default:
+	}
 }
 
 func (w *windowImpl) NextEvent() interface{} {
-	ev := <-w.domEvents.GetEventChan()
-	return ev
+	for {
+		w.mutex.Lock()
+		if event, ok := w.nextQueuedEvent(); ok {
+			w.mutex.Unlock()
+			return event
+		}
+		w.mutex.Unlock()
+
+		select {
+		case event := <-w.domEvents.GetEventChan():
+			w.mutex.Lock()
+			// A concurrent SendFirst can drain later channel events before this
+			// receive acquires the mutex, so preserve this event ahead of them.
+			w.backEvents = append(w.backEvents, nil)
+			copy(w.backEvents[1:], w.backEvents[:len(w.backEvents)-1])
+			w.backEvents[0] = event
+			w.mutex.Unlock()
+		case <-w.eventWake:
+		}
+	}
+}
+
+func (w *windowImpl) nextQueuedEvent() (interface{}, bool) {
+	if last := len(w.frontEvents) - 1; last >= 0 {
+		event := w.frontEvents[last]
+		w.frontEvents[last] = nil
+		w.frontEvents = w.frontEvents[:last]
+		return event, true
+	}
+	if len(w.backEvents) > 0 {
+		event := w.backEvents[0]
+		w.backEvents[0] = nil
+		w.backEvents = w.backEvents[1:]
+		return event, true
+	}
+	return nil, false
 }
 
 // Uploader methods
