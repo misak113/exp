@@ -84,13 +84,24 @@ func (d *DomEvents) emitSizeEvent() {
 	}
 }
 
+func (d *DomEvents) inputPosition(ev js.Value) (float32, float32) {
+	getBoundingClientRect := d.inputTarget.Get("getBoundingClientRect")
+	if getBoundingClientRect.Type() == js.TypeFunction {
+		rect := d.inputTarget.Call("getBoundingClientRect")
+		return float32(ev.Get("clientX").Float() - rect.Get("left").Float()),
+			float32(ev.Get("clientY").Float() - rect.Get("top").Float())
+	}
+	return float32(ev.Get("offsetX").Float()), float32(ev.Get("offsetY").Float())
+}
+
 func (d *DomEvents) bindMouseEvents() {
 	// move
 	onMove := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		args[0].Call("preventDefault")
+		x, y := d.inputPosition(args[0])
 		d.eventChan <- mouse.Event{
-			X:         float32(args[0].Get("offsetX").Float()),
-			Y:         float32(args[0].Get("offsetY").Float()),
+			X:         x,
+			Y:         y,
 			Button:    mouse.ButtonNone,
 			Direction: mouse.DirNone,
 			Modifiers: getEventModifiers(args[0]),
@@ -102,9 +113,10 @@ func (d *DomEvents) bindMouseEvents() {
 	// press/release
 	onClick := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		args[0].Call("preventDefault")
+		x, y := d.inputPosition(args[0])
 		d.eventChan <- mouse.Event{
-			X:         float32(args[0].Get("offsetX").Float()),
-			Y:         float32(args[0].Get("offsetY").Float()),
+			X:         x,
+			Y:         y,
 			Button:    getMouseButton(args[0]),
 			Direction: getMouseDirection(args[0]),
 			Modifiers: getEventModifiers(args[0]),
@@ -116,9 +128,10 @@ func (d *DomEvents) bindMouseEvents() {
 
 	// wheel
 	onWheel := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		x, y := d.inputPosition(args[0])
 		d.eventChan <- mouse.Event{
-			X:         float32(args[0].Get("offsetX").Float()),
-			Y:         float32(args[0].Get("offsetY").Float()),
+			X:         x,
+			Y:         y,
 			Button:    getWheelButton(args[0]),
 			Direction: mouse.DirStep,
 			Modifiers: getEventModifiers(args[0]),
@@ -443,9 +456,10 @@ func (d *DomEvents) addTouchListener(eventName string, eventType touch.Type) {
 		}
 
 		t := changedTouches.Index(0)
+		x, y := d.inputPosition(t)
 		d.emitTouchEvent(touch.Event{
-			X:        float32(t.Get("clientX").Float()),
-			Y:        float32(t.Get("clientY").Float()),
+			X:        x,
+			Y:        y,
 			Sequence: touch.Sequence(t.Get("identifier").Int()),
 			Type:     eventType,
 		})

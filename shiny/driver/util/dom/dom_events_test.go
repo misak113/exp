@@ -9,6 +9,28 @@ import (
 	"testing"
 )
 
+func TestInputPositionRelativeToTarget(t *testing.T) {
+	getBoundingClientRect := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		rect := js.Global().Get("Object").New()
+		rect.Set("left", 120)
+		rect.Set("top", 80)
+		return rect
+	})
+	defer getBoundingClientRect.Release()
+
+	inputTarget := js.Global().Get("Object").New()
+	inputTarget.Set("getBoundingClientRect", getBoundingClientRect)
+	event := js.Global().Get("Object").New()
+	event.Set("clientX", 145)
+	event.Set("clientY", 115)
+
+	domEvents := NewDomEventsForTarget(inputTarget)
+	x, y := domEvents.inputPosition(event)
+	if x != 25 || y != 35 {
+		t.Fatalf("input position is not target-relative: got (%v, %v), want (25, 35)", x, y)
+	}
+}
+
 func TestInputEventsBindToTarget(t *testing.T) {
 	var addedEvents []string
 	var removedEvents []string
