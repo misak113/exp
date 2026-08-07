@@ -1,3 +1,4 @@
+//go:build js
 // +build js
 
 package webgldriver
@@ -132,13 +133,33 @@ func (w *windowImpl) Publish() screen.PublishResult {
 // EventDeque methods
 
 func (w *windowImpl) Send(event interface{}) {
+	w.mutex.Lock()
 	if w.released {
+		w.mutex.Unlock()
 		return
 	}
-	panic("Not implemented")
+	eventChan := w.domEvents.GetEventChan()
+	w.mutex.Unlock()
+	eventChan <- event
+}
+
+func (w *windowImpl) SendNonBlocking(event interface{}) bool {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	if w.released {
+		return false
+	}
+	select {
+	case w.domEvents.GetEventChan() <- event:
+		return true
+	default:
+		return false
+	}
 }
 
 func (w *windowImpl) SendFirst(event interface{}) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 	if w.released {
 		return
 	}
